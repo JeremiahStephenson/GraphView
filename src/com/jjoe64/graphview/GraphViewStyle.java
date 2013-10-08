@@ -34,6 +34,9 @@ public class GraphViewStyle {
 	private int verticalLabelsWidth;
 	private int numVerticalLabels;
 	private int numHorizontalLabels;
+    private int verticalLabelsLeftMargin;
+    private int verticalLabelsRightMargin;
+    private int[] lineGradientColors = null;
 
 	public GraphViewStyle() {
 		verticalLabelsColor = Color.WHITE;
@@ -75,6 +78,18 @@ public class GraphViewStyle {
 		return verticalLabelsWidth;
 	}
 
+    public int getVerticalLabelsLeftMargin() {
+        return verticalLabelsLeftMargin;
+    }
+
+    public int getVerticalLabelsRightMargin() {
+        return verticalLabelsRightMargin;
+    }
+
+    public int[] getLineGradientColors() {
+        return lineGradientColors;
+    }
+
 	public void setGridColor(int c) {
 		gridColor = c;
 	}
@@ -111,4 +126,13 @@ public class GraphViewStyle {
 	public void setVerticalLabelsWidth(int verticalLabelsWidth) {
 		this.verticalLabelsWidth = verticalLabelsWidth;
 	}
+
+    public void setVerticalLabelsMargins(int verticalLabelsLeftMargin, int verticalLabelsRightMargin) {
+        this.verticalLabelsLeftMargin = verticalLabelsLeftMargin;
+        this.verticalLabelsRightMargin = verticalLabelsRightMargin;
+    }
+
+    public void setLineGradientColors(int[] colors) {
+        this.lineGradientColors = colors;
+    }
 }

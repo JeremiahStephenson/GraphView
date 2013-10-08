@@ -31,8 +31,12 @@ import android.graphics.Paint.Align;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
@@ -40,7 +44,7 @@ import com.jjoe64.graphview.compatible.ScaleGestureDetector;
 
 /**
  * GraphView is a Android View for creating zoomable and scrollable graphs.
- * This is the abstract base class for all graphs. Extend this class and implement {@link #drawSeries(Canvas, GraphViewDataInterface[], float, float, float, double, double, double, double, float)} to display a custom graph.
+ * This is the abstract base class for all graphs. Extend this class and implement {@link ##drawSeries(Canvas, GraphViewDataInterface[], float, float, float, double, double, double, double, float)} to display a custom graph.
  * Use {@link LineGraphView} for creating a line chart.
  *
  * @author jjoe64 - jonas gehring - http://www.jjoe64.com
@@ -51,7 +55,7 @@ import com.jjoe64.graphview.compatible.ScaleGestureDetector;
  */
 abstract public class GraphView extends LinearLayout {
 	static final private class GraphViewConfig {
-		static final float BORDER = 20;
+		static final float BORDER = 10;
 	}
 
 	private class GraphViewContentView extends View {
@@ -109,28 +113,35 @@ abstract public class GraphView extends LinearLayout {
 				verlabels = generateVerlabels(graphheight);
 			}
 
-			// vertical lines
+			// horizontal lines
 			paint.setTextAlign(Align.LEFT);
 			int vers = verlabels.length - 1;
 			for (int i = 0; i < verlabels.length; i++) {
 				paint.setColor(graphViewStyle.getGridColor());
 				float y = ((graphheight / vers) * i) + border;
-				canvas.drawLine(horstart, y, width, y, paint);
+                if ((i != verlabels.length - 1) || showBottomLineAndLabels) {
+				    canvas.drawLine(horstart, y, width, y, paint);
+                }
 			}
 
-			// horizontal labels + lines
+			// horizontal labels + vertical lines
 			int hors = horlabels.length - 1;
 			for (int i = 0; i < horlabels.length; i++) {
 				paint.setColor(graphViewStyle.getGridColor());
 				float x = ((graphwidth / hors) * i) + horstart;
-				canvas.drawLine(x, height - border, x, border, paint);
+                if (showVerticalGridLines) {
+				    canvas.drawLine(x, height - border, x, border, paint);
+                }
 				paint.setTextAlign(Align.CENTER);
 				if (i==horlabels.length-1)
 					paint.setTextAlign(Align.RIGHT);
 				if (i==0)
 					paint.setTextAlign(Align.LEFT);
 				paint.setColor(graphViewStyle.getHorizontalLabelsColor());
-				canvas.drawText(horlabels[i], x, height - 4, paint);
+
+                if (showBottomLineAndLabels) {
+				    canvas.drawText(horlabels[i], x, height - 4, paint);
+                }
 			}
 
 			paint.setTextAlign(Align.CENTER);
@@ -152,7 +163,7 @@ abstract public class GraphView extends LinearLayout {
 			paint.setStrokeCap(Paint.Cap.ROUND);
 
 			for (int i=0; i<graphSeries.size(); i++) {
-				drawSeries(canvas, _values(i), graphwidth, graphheight, border, minX, minY, diffX, diffY, horstart, graphSeries.get(i).style);
+				drawSeries(canvas, _values(i), graphwidth, graphheight, border, minX, minY, diffX, diffY, horstart, graphSeries.get(i).style, getGraphViewStyle().getLineGradientColors());
 			}
 
 			if (showLegend) drawLegend(canvas, height, width);
@@ -164,13 +175,22 @@ abstract public class GraphView extends LinearLayout {
 				viewportStart -= f*viewportSize/graphwidth;
 
 				// minimal and maximal view limit
-				double minX = getMinX(true);
+				//double minX = getMinX(true);
 				double maxX = getMaxX(true);
-				if (viewportStart < minX) {
-					viewportStart = minX;
-				} else if (viewportStart+viewportSize > maxX) {
-					viewportStart = maxX - viewportSize;
-				}
+
+//				if (viewportStart < minX) {
+//					viewportStart = minX;
+//				} else if (viewportStart+viewportSize > maxX) {
+//					viewportStart = maxX - viewportSize;
+//				}
+
+                if (viewportStart+viewportSize > (maxX + scrollPaddingRight)) {
+                    viewportStart = (maxX + scrollPaddingRight) - viewportSize;
+                }
+
+                if (viewportStart < viewportStartInit - scrollPaddingLeft) {
+                    viewportStart = viewportStartInit - scrollPaddingLeft;
+                }
 
 				// labels have to be regenerated
 				if (!staticHorizontalLabels) horlabels = null;
@@ -272,20 +292,12 @@ abstract public class GraphView extends LinearLayout {
 			paint.setStrokeWidth(0);
 
 			 // measure bottom text
-			if (labelTextHeight == null || verLabelTextWidth == null) {
+			if (labelTextHeight == null) {
 				paint.setTextSize(getGraphViewStyle().getTextSize());
 				double testY = ((getMaxY()-getMinY())*0.783)+getMinY();
 				String testLabel = formatLabel(testY, false);
 				paint.getTextBounds(testLabel, 0, testLabel.length(), textBounds);
 				labelTextHeight = (textBounds.height());
-				verLabelTextWidth = (textBounds.width());
-			}
-			if (getGraphViewStyle().getVerticalLabelsWidth()==0 && getLayoutParams().width != verLabelTextWidth+GraphViewConfig.BORDER) {
-				setLayoutParams(new LayoutParams(
-						(int) (verLabelTextWidth+GraphViewConfig.BORDER), LayoutParams.FILL_PARENT));
-			} else if (getGraphViewStyle().getVerticalLabelsWidth()!=0 && getGraphViewStyle().getVerticalLabelsWidth() != getLayoutParams().width) {
-				setLayoutParams(new LayoutParams(
-						getGraphViewStyle().getVerticalLabelsWidth(), LayoutParams.FILL_PARENT));
 			}
 
 			float border = GraphViewConfig.BORDER;
@@ -297,6 +309,31 @@ abstract public class GraphView extends LinearLayout {
 				verlabels = generateVerlabels(graphheight);
 			}
 
+            if (verLabelTextWidth == null) {
+                int testWidth = 0;
+                for (String test : verlabels) {
+                    paint.getTextBounds(test, 0, test.length(), textBounds);
+
+                    if (textBounds.width() > testWidth) {
+                        testWidth = textBounds.width();
+                    }
+                }
+                verLabelTextWidth = testWidth;
+            }
+
+            if (getGraphViewStyle().getVerticalLabelsWidth()==0 && getLayoutParams().width != verLabelTextWidth+GraphViewConfig.BORDER) {
+//				setLayoutParams(new LayoutParams(
+//						(int) (verLabelTextWidth+GraphViewConfig.BORDER), LayoutParams.FILL_PARENT));
+                setViewLayoutParams((int)(verLabelTextWidth+GraphViewConfig.BORDER), LayoutParams.MATCH_PARENT,
+                        getGraphViewStyle().getVerticalLabelsLeftMargin(), getGraphViewStyle().getVerticalLabelsRightMargin());
+
+            } else if (getGraphViewStyle().getVerticalLabelsWidth()!=0 && getGraphViewStyle().getVerticalLabelsWidth() != getLayoutParams().width) {
+//				setLayoutParams(new LayoutParams(
+//						getGraphViewStyle().getVerticalLabelsWidth(), LayoutParams.FILL_PARENT));
+                setViewLayoutParams(getGraphViewStyle().getVerticalLabelsWidth(), LayoutParams.MATCH_PARENT,
+                        getGraphViewStyle().getVerticalLabelsLeftMargin(), getGraphViewStyle().getVerticalLabelsRightMargin());
+            }
+
 			// vertical labels
 			paint.setTextAlign(Align.LEFT);
 			int vers = verlabels.length - 1;
@@ -306,6 +343,15 @@ abstract public class GraphView extends LinearLayout {
 				canvas.drawText(verlabels[i], 0, y, paint);
 			}
 		}
+
+        private void setViewLayoutParams(int width, int height, int pxLeft, int pxRight) {
+            final MarginLayoutParams params = (MarginLayoutParams)getLayoutParams();
+            params.width = width;
+            params.height = height;
+            params.leftMargin = pxLeft;
+            params.rightMargin = pxRight;
+            setLayoutParams(params);
+        }
 	}
 
 	protected final Paint paint;
@@ -314,7 +360,12 @@ abstract public class GraphView extends LinearLayout {
 	private String title;
 	private boolean scrollable;
 	private boolean disableTouch;
+    private boolean showVerticalGridLines = true;
+    private boolean showBottomLineAndLabels = true;
 	private double viewportStart;
+    private double viewportStartInit;
+    private double scrollPaddingLeft;
+    private double scrollPaddingRight;
 	private double viewportSize;
 	private final View viewVerLabels;
 	private ScaleGestureDetector scaleDetector;
@@ -337,8 +388,12 @@ abstract public class GraphView extends LinearLayout {
 	private boolean staticHorizontalLabels;
 	private boolean staticVerticalLabels;
 
-	public GraphView(Context context, AttributeSet attrs) {
-		this(context, attrs.getAttributeValue(null, "title"));
+    public GraphView(Context context, AttributeSet attrs) {
+        this(context, attrs, false);
+    }
+
+	public GraphView(Context context, AttributeSet attrs, boolean verticalLabelsOnRight) {
+		this(context, attrs.getAttributeValue(null, "title"), verticalLabelsOnRight);
 
 		int width = attrs.getAttributeIntValue("android", "layout_width", LayoutParams.MATCH_PARENT);
 		int height = attrs.getAttributeIntValue("android", "layout_height", LayoutParams.MATCH_PARENT);
@@ -349,7 +404,12 @@ abstract public class GraphView extends LinearLayout {
 	 * @param context
 	 * @param title [optional]
 	 */
-	public GraphView(Context context, String title) {
+
+    public GraphView(Context context, String title) {
+        this(context, title, false);
+    }
+
+	public GraphView(Context context, String title, boolean verticalLabelsOnRight) {
 		super(context);
 		setLayoutParams(new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
@@ -364,9 +424,15 @@ abstract public class GraphView extends LinearLayout {
 		graphSeries = new ArrayList<GraphViewSeries>();
 
 		viewVerLabels = new VerLabelsView(context);
-		addView(viewVerLabels);
+		//addView(viewVerLabels);
 		graphViewContentView = new GraphViewContentView(context);
 		addView(graphViewContentView, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT, 1));
+
+        if (verticalLabelsOnRight) {
+            addView(viewVerLabels);
+        } else {
+            addView(viewVerLabels, 0);
+        }
 	}
 
 	private GraphViewDataInterface[] _values(int idxSeries) {
@@ -441,7 +507,7 @@ abstract public class GraphView extends LinearLayout {
 		}
 	}
 
-	abstract protected void drawSeries(Canvas canvas, GraphViewDataInterface[] values, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart, GraphViewSeriesStyle style);
+	abstract protected void drawSeries(Canvas canvas, GraphViewDataInterface[] values, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart, GraphViewSeriesStyle style, int[] colors);
 
 	/**
 	 * formats the label
@@ -558,6 +624,7 @@ abstract public class GraphView extends LinearLayout {
 	 * warning: only override this, if you really know want you're doing!
 	 */
 	protected double getMaxX(boolean ignoreViewport) {
+
 		// if viewport is set, use this
 		if (!ignoreViewport && viewportSize != 0) {
 			return viewportStart+viewportSize;
@@ -865,6 +932,20 @@ abstract public class GraphView extends LinearLayout {
 		this.title = title;
 	}
 
+    /**
+     * If we want to show vertical lines
+     */
+    public void setShowVerticalGridLines(boolean show) {
+        this.showVerticalGridLines = show;
+    }
+
+    /**
+     * If we want to show the bottom line with labels
+     */
+    public void setShowBottomLineAndLabels(boolean show) {
+        this.showBottomLineAndLabels = show;
+    }
+
 	/**
 	 * set's static vertical labels (from top to bottom)
 	 * @param verlabels if null, labels were generated automatically
@@ -880,8 +961,15 @@ abstract public class GraphView extends LinearLayout {
 	 * @param start x-value
 	 * @param size
 	 */
-	public void setViewPort(double start, double size) {
+    public void setViewPort(double start, double size) {
+        setViewPort(start, size, 0, 0);
+    }
+	public void setViewPort(double start, double size, double paddingLeft, double paddingRight) {
+        viewportStartInit = start;
 		viewportStart = start;
 		viewportSize = size;
+
+        scrollPaddingLeft = paddingLeft;
+        scrollPaddingRight = paddingRight;
 	}
 }

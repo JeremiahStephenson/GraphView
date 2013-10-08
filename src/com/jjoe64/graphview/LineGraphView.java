@@ -22,8 +22,12 @@ package com.jjoe64.graphview;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Shader;
 import android.util.AttributeSet;
+import android.util.Log;
 
 import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
 
@@ -33,17 +37,26 @@ import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
 public class LineGraphView extends GraphView {
 	private final Paint paintBackground;
 	private boolean drawBackground;
+    private Path poly;
 
-	public LineGraphView(Context context, AttributeSet attrs) {
-		super(context, attrs);
+    public LineGraphView(Context context, AttributeSet attrs) {
+        this(context, attrs, false);
+    }
+
+	public LineGraphView(Context context, AttributeSet attrs, boolean verticalLabelsOnRight) {
+		super(context, attrs, verticalLabelsOnRight);
 
 		paintBackground = new Paint();
 		paintBackground.setColor(Color.rgb(20, 40, 60));
 		paintBackground.setStrokeWidth(4);
 	}
 
-	public LineGraphView(Context context, String title) {
-		super(context, title);
+    public LineGraphView(Context context, String title) {
+        this(context, title, false);
+    }
+
+	public LineGraphView(Context context, String title, boolean verticalLabelsOnRight) {
+		super(context, title, verticalLabelsOnRight);
 
 		paintBackground = new Paint();
 		paintBackground.setColor(Color.rgb(20, 40, 60));
@@ -51,52 +64,24 @@ public class LineGraphView extends GraphView {
 	}
 
 	@Override
-	public void drawSeries(Canvas canvas, GraphViewDataInterface[] values, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart, GraphViewSeriesStyle style) {
-		// draw background
+	public void drawSeries(Canvas canvas, GraphViewDataInterface[] values, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart, GraphViewSeriesStyle style, int[] colors) {
+
 		double lastEndY = 0;
 		double lastEndX = 0;
-		if (drawBackground) {
-			float startY = graphheight + border;
-			for (int i = 0; i < values.length; i++) {
-				double valY = values[i].getY() - minY;
-				double ratY = valY / diffY;
-				double y = graphheight * ratY;
 
-				double valX = values[i].getX() - minX;
-				double ratX = valX / diffX;
-				double x = graphwidth * ratX;
+        // draw background
+        drawShadedBackground(canvas, values, graphwidth, graphheight, border, minX, minY, diffX, diffY, horstart);
 
-				float endX = (float) x + (horstart + 1);
-				float endY = (float) (border - y) + graphheight +2;
-
-				if (i > 0) {
-					// fill space between last and current point
-					double numSpace = ((endX - lastEndX) / 3f) +1;
-					for (int xi=0; xi<numSpace; xi++) {
-						float spaceX = (float) (lastEndX + ((endX-lastEndX)*xi/(numSpace-1)));
-						float spaceY = (float) (lastEndY + ((endY-lastEndY)*xi/(numSpace-1)));
-
-						// start => bottom edge
-						float startX = spaceX;
-
-						// do not draw over the left edge
-						if (startX-horstart > 1) {
-							canvas.drawLine(startX, startY, spaceX, spaceY, paintBackground);
-						}
-					}
-				}
-
-				lastEndY = endY;
-				lastEndX = endX;
-			}
-		}
+        final Shader temp = paint.getShader();
 
 		// draw data
 		paint.setStrokeWidth(style.thickness);
-		paint.setColor(style.color);
+        if (colors != null) {
+            paint.setShader(new LinearGradient(0, 0, 0, getHeight(), colors, null, Shader.TileMode.MIRROR));
+        } else {
+            paint.setColor(style.color);
+        }
 
-		lastEndY = 0;
-		lastEndX = 0;
 		for (int i = 0; i < values.length; i++) {
 			double valY = values[i].getY() - minY;
 			double ratY = valY / diffY;
@@ -117,6 +102,8 @@ public class LineGraphView extends GraphView {
 			lastEndY = y;
 			lastEndX = x;
 		}
+
+        paint.setShader(temp);
 	}
 
 	public int getBackgroundColor() {
@@ -138,4 +125,50 @@ public class LineGraphView extends GraphView {
 	public void setDrawBackground(boolean drawBackground) {
 		this.drawBackground = drawBackground;
 	}
+
+    protected void drawShadedBackground(Canvas canvas, GraphViewDataInterface[] values, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart) {
+
+        if (drawBackground) {
+
+            if (poly == null) {
+                poly = new Path();
+            }
+
+            poly.reset();
+
+            float startY = graphheight + border;
+            float initialX = 0;
+            float initialY = 0;
+            float endX = 0;
+            float endY;
+            double x;
+            double y;
+            float tempX;
+
+            for (int i = 0; i < values.length; i++) {
+
+                y = graphheight * ((values[i].getY() - minY) / diffY);
+                x = graphwidth * ((values[i].getX() - minX) / diffX);
+
+                tempX = (float)x;
+                endX = tempX + (horstart + 1);
+                endY = (float) (border - y) + graphheight + 2;
+
+                if (i == 0) {
+                    initialX = endX;
+                    initialY = endY;
+                    poly.moveTo(endX, endY);
+                } else {
+                    poly.lineTo(endX, endY);
+                }
+            }
+
+            poly.lineTo(endX, startY);
+            poly.lineTo(initialX, startY);
+            poly.lineTo(initialX, initialY);
+            poly.close();
+
+            canvas.drawPath(poly, paintBackground);
+        }
+    }
 }
