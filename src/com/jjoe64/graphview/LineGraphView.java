@@ -63,6 +63,14 @@ public class LineGraphView extends GraphView {
 		paintBackground.setStrokeWidth(4);
 	}
 
+    public LineGraphView(Context context, String title, GraphViewStyle style, boolean verticalLabelsOnRight) {
+        super(context, title, style, verticalLabelsOnRight);
+
+        paintBackground = new Paint();
+        paintBackground.setColor(Color.rgb(20, 40, 60));
+        paintBackground.setStrokeWidth(4);
+    }
+
 	@Override
 	public void drawSeries(Canvas canvas, GraphViewDataInterface[] values, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart, GraphViewSeriesStyle style, int[] colors) {
 

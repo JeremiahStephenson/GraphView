@@ -37,6 +37,7 @@ public class GraphViewStyle {
     private int verticalLabelsLeftMargin;
     private int verticalLabelsRightMargin;
     private int[] lineGradientColors = null;
+    private boolean showBottomLineAndLabels = true;
 
 	public GraphViewStyle() {
 		verticalLabelsColor = Color.WHITE;
@@ -90,6 +91,10 @@ public class GraphViewStyle {
         return lineGradientColors;
     }
 
+    public boolean getShowBottomLinesAndLabels() {
+        return showBottomLineAndLabels;
+    }
+
 	public void setGridColor(int c) {
 		gridColor = c;
 	}
@@ -134,5 +139,12 @@ public class GraphViewStyle {
 
     public void setLineGradientColors(int[] colors) {
         this.lineGradientColors = colors;
+    }
+
+    /**
+     * If we want to show the bottom line with labels
+     */
+    public void setShowBottomLineAndLabels(boolean show) {
+        this.showBottomLineAndLabels = show;
     }
 }
