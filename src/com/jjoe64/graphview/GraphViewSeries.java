@@ -91,7 +91,7 @@ public class GraphViewSeries {
 	 * add one data to current data
 	 * @param value the new data to append
 	 * @param scrollToEnd true => graphview will scroll to the end (maxX)
-	 * @deprecated please use {@link #appendData(GraphViewDataInterface, boolean, int)} to avoid memory overflow
+	 * @deprecated please use {@link #appendData(GraphViewDataInterface, boolean, int, boolean)} to avoid memory overflow
 	 */
 	@Deprecated
 	public void appendData(GraphViewDataInterface value, boolean scrollToEnd) {
@@ -114,7 +114,7 @@ public class GraphViewSeries {
 	 * @param scrollToEnd true => graphview will scroll to the end (maxX)
 	 * @param maxDataCount if max data count is reached, the oldest data value will be lost
 	 */
-	public void appendData(GraphViewDataInterface value, boolean scrollToEnd, int maxDataCount) {
+	public void appendData(GraphViewDataInterface value, boolean scrollToEnd, int maxDataCount, boolean properScroll) {
 		synchronized (values) {
 			int curDataCount = values.length;
 			GraphViewDataInterface[] newValues;
@@ -137,7 +137,11 @@ public class GraphViewSeries {
 		// update linked graph views
 		for (GraphView g : graphViews) {
 			if (scrollToEnd) {
-				g.scrollToEnd();
+                if (properScroll) {
+				    g.scrollToEndProperly();
+                } else {
+                    g.scrollToEnd();
+                }
 			}
 		}
 	}
@@ -168,4 +172,11 @@ public class GraphViewSeries {
 			g.redrawAll();
 		}
 	}
+
+    public GraphViewDataInterface getLastDataItem() {
+        if (this.values != null && this.values.length > 0) {
+            return this.values[this.values.length - 1];
+        }
+        return null;
+    }
 }

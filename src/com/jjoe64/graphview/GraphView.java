@@ -815,10 +815,28 @@ abstract public class GraphView extends RelativeLayout {
 	 */
 	public void scrollToEnd() {
 		if (!scrollable) throw new IllegalStateException("This GraphView is not scrollable.");
+
 		double max = getMaxX(true);
 		viewportStart = max-viewportSize;
 		redrawAll();
 	}
+
+    /**
+     * Used for smoother scrolling to the right
+     */
+    public void scrollToEndProperly() {
+        if (!scrollable) throw new IllegalStateException("This GraphView is not scrollable.");
+
+        double max = getMaxX(true);
+
+        double diff = 0;
+        if (max > ((viewportSize + viewportStart) - scrollPaddingRight)) {
+            diff = max - ((viewportSize + viewportStart) - scrollPaddingRight);
+        }
+
+        viewportStart += diff;
+        redrawAll();
+    }
 
 	/**
 	 * set a custom label formatter
