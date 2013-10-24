@@ -19,7 +19,10 @@
 
 package com.jjoe64.graphview;
 
+import android.os.Build;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -126,10 +129,9 @@ public class GraphViewSeries {
 				newValues[curDataCount] = value;
 			} else {
 				// we have to trim one data
-				newValues = new GraphViewDataInterface[maxDataCount];
-				System.arraycopy(values, 1, newValues, 0, curDataCount-1);
+                newValues = Arrays.copyOfRange(values, 1, maxDataCount - 1);
 				// append new data
-				newValues[maxDataCount-1] = value;
+				newValues[newValues.length - 1] = value;
 			}
 			values = newValues;
 		}
