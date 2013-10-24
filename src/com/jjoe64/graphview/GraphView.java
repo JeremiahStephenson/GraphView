@@ -19,11 +19,6 @@
 
 package com.jjoe64.graphview;
 
-import java.io.Serializable;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.List;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -32,17 +27,17 @@ import android.graphics.Paint.Align;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
-import android.util.Log;
-import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
 import com.jjoe64.graphview.compatible.ScaleGestureDetector;
+
+import java.io.Serializable;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * GraphView is a Android View for creating zoomable and scrollable graphs.
@@ -81,100 +76,100 @@ abstract public class GraphView extends RelativeLayout {
 		@Override
 		protected void onDraw(Canvas canvas) {
 
-			paint.setAntiAlias(true);
+            paint.setAntiAlias(true);
 
-			// normal
-			paint.setStrokeWidth(0);
+            // normal
+            paint.setStrokeWidth(0);
 
-			float border = GraphViewConfig.BORDER;
-			float horstart = showOnLeft ? 0 : (viewVerLabels.getLayoutParams().width +
+            float border = GraphViewConfig.BORDER;
+            float horstart = showOnLeft ? 0 : (viewVerLabels.getLayoutParams().width +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).leftMargin +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).rightMargin);
-			float height = getHeight();
-			float width = getWidth() - (viewVerLabels.getLayoutParams().width +
+            float height = getHeight();
+            float width = getWidth() - (viewVerLabels.getLayoutParams().width +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).leftMargin +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).rightMargin) - 1;
-			double maxY = getMaxY();
-			double minY = getMinY();
-			double maxX = getMaxX(false);
-			double minX = getMinX(false);
-			double diffX = maxX - minX;
+            double maxY = getMaxY();
+            double minY = getMinY();
+            double maxX = getMaxX(false);
+            double minX = getMinX(false);
+            double diffX = maxX - minX;
 
-			 // measure bottom text
-			if (labelTextHeight == null || horLabelTextWidth == null) {
-				paint.setTextSize(getGraphViewStyle().getTextSize());
-				double testX = ((getMaxX(true)-getMinX(true))*0.783)+getMinX(true);
-				String testLabel = formatLabel(testX, true);
-				paint.getTextBounds(testLabel, 0, testLabel.length(), textBounds);
-				labelTextHeight = (textBounds.height());
-				horLabelTextWidth = (textBounds.width());
-			}
-			border += labelTextHeight;
+             // measure bottom text
+            if (labelTextHeight == null || horLabelTextWidth == null) {
+                paint.setTextSize(getGraphViewStyle().getTextSize());
+                double testX = ((getMaxX(true)-getMinX(true))*0.783)+getMinX(true);
+                String testLabel = formatLabel(testX, true);
+                paint.getTextBounds(testLabel, 0, testLabel.length(), textBounds);
+                labelTextHeight = (textBounds.height());
+                horLabelTextWidth = (textBounds.width());
+            }
+            border += labelTextHeight;
 
-			float graphheight = height - (2 * border);
-			graphwidth = width;
+            float graphheight = height - (2 * border);
+            graphwidth = width;
 
-			if (horlabels == null) {
-				horlabels = generateHorlabels(graphwidth);
-			}
-			if (verlabels == null) {
-				verlabels = generateVerlabels(graphheight);
-			}
+            if (horlabels == null) {
+                horlabels = generateHorlabels(graphwidth);
+            }
+            if (verlabels == null) {
+                verlabels = generateVerlabels(graphheight);
+            }
 
-			// horizontal lines
-			paint.setTextAlign(Align.LEFT);
-			int vers = verlabels.length - 1;
-			for (int i = 0; i < verlabels.length; i++) {
-				paint.setColor(graphViewStyle.getGridColor());
-				float y = ((graphheight / vers) * i) + border;
+            // horizontal lines
+            paint.setTextAlign(Align.LEFT);
+            int vers = verlabels.length - 1;
+            for (int i = 0; i < verlabels.length; i++) {
+                paint.setColor(graphViewStyle.getGridColor());
+                float y = ((graphheight / vers) * i) + border;
                 if ((i != verlabels.length - 1) || getGraphViewStyle().getShowBottomLinesAndLabels()) {
-				    canvas.drawLine(horstart, y, width + horstart, y, paint);
+                    canvas.drawLine(horstart, y, width + horstart, y, paint);
                 }
-			}
+            }
 
-			// horizontal labels + vertical lines
-			int hors = horlabels.length - 1;
-			for (int i = 0; i < horlabels.length; i++) {
-				paint.setColor(graphViewStyle.getGridColor());
-				float x = ((graphwidth / hors) * i) + horstart;
+            // horizontal labels + vertical lines
+            int hors = horlabels.length - 1;
+            for (int i = 0; i < horlabels.length; i++) {
+                paint.setColor(graphViewStyle.getGridColor());
+                float x = ((graphwidth / hors) * i) + horstart;
                 if (showVerticalGridLines) {
-				    canvas.drawLine(x, height - border, x, border, paint);
+                    canvas.drawLine(x, height - border, x, border, paint);
                 }
-				paint.setTextAlign(Align.CENTER);
-				if (i==horlabels.length-1)
-					paint.setTextAlign(Align.RIGHT);
-				if (i==0)
-					paint.setTextAlign(Align.LEFT);
-				paint.setColor(graphViewStyle.getHorizontalLabelsColor());
+                paint.setTextAlign(Align.CENTER);
+                if (i==horlabels.length-1)
+                    paint.setTextAlign(Align.RIGHT);
+                if (i==0)
+                    paint.setTextAlign(Align.LEFT);
+                paint.setColor(graphViewStyle.getHorizontalLabelsColor());
 
                 if (getGraphViewStyle().getShowBottomLinesAndLabels()) {
-				    canvas.drawText(horlabels[i], x, height - 4, paint);
+                    canvas.drawText(horlabels[i], x, height - 4, paint);
                 }
-			}
+            }
 
-			paint.setTextAlign(Align.CENTER);
-			canvas.drawText(title, (graphwidth / 2) + horstart, border - 4, paint);
+            paint.setTextAlign(Align.CENTER);
+            canvas.drawText(title, (graphwidth / 2) + horstart, border - 4, paint);
 
-			if (maxY == minY) {
-				// if min/max is the same, fake it so that we can render a line
-				if(maxY == 0) {
-					// if both are zero, change the values to prevent division by zero
-					maxY = 1.0d;
-					minY = 0.0d;
-				} else {
-					maxY = maxY*1.05d;
-					minY = minY*0.95d;
-				}
-			}
+            if (maxY == minY) {
+                // if min/max is the same, fake it so that we can render a line
+                if(maxY == 0) {
+                    // if both are zero, change the values to prevent division by zero
+                    maxY = 1.0d;
+                    minY = 0.0d;
+                } else {
+                    maxY = maxY*1.05d;
+                    minY = minY*0.95d;
+                }
+            }
 
-			double diffY = maxY - minY;
-			paint.setStrokeCap(Paint.Cap.ROUND);
+            double diffY = maxY - minY;
+            paint.setStrokeCap(Paint.Cap.ROUND);
 
-			for (int i=0; i<graphSeries.size(); i++) {
-				drawSeries(canvas, _values(i), graphwidth, graphheight, border, minX, minY, diffX, diffY, horstart, graphSeries.get(i).style, getGraphViewStyle().getLineGradientColors());
-			}
+            for (int i=0; i<graphSeries.size(); i++) {
+                drawSeries(canvas, _values(i), graphwidth, graphheight, border, minX, minY, diffX, diffY, horstart, graphSeries.get(i).style, getGraphViewStyle().getLineGradientColors());
+            }
 
-			if (showLegend) drawLegend(canvas, height, width);
+            if (showLegend) drawLegend(canvas, height, width);
 		}
 
 		private void onMoveGesture(float f) {
@@ -401,6 +396,7 @@ abstract public class GraphView extends RelativeLayout {
 	private final Rect textBounds = new Rect();
 	private boolean staticHorizontalLabels;
 	private boolean staticVerticalLabels;
+    private boolean allowRefresh = true;
 
     public GraphView(Context context, AttributeSet attrs) {
         this(context, attrs, false);
@@ -723,6 +719,10 @@ abstract public class GraphView extends RelativeLayout {
 		}
 	}
 
+    public double getViewPortStart() {
+        return getMinX(false);
+    }
+
 	/**
 	 * returns the minimal Y value of all data.
 	 *
@@ -761,17 +761,19 @@ abstract public class GraphView extends RelativeLayout {
 	 * Normally there is no need to call this manually.
 	 */
 	public void redrawAll() {
-		if (!staticVerticalLabels) verlabels = null;
-		if (!staticHorizontalLabels) horlabels = null;
-		numberformatter[0] = null;
-		numberformatter[1] = null;
-		labelTextHeight = null;
-		horLabelTextWidth = null;
-		verLabelTextWidth = null;
+        if (allowRefresh) {
+            if (!staticVerticalLabels) verlabels = null;
+            if (!staticHorizontalLabels) horlabels = null;
+            numberformatter[0] = null;
+            numberformatter[1] = null;
+            labelTextHeight = null;
+            horLabelTextWidth = null;
+            verLabelTextWidth = null;
 
-		invalidate();
-		viewVerLabels.invalidate();
-		graphViewContentView.invalidate();
+            invalidate();
+            viewVerLabels.invalidate();
+            graphViewContentView.invalidate();
+        }
 	}
 
 	/**
@@ -1002,4 +1004,8 @@ abstract public class GraphView extends RelativeLayout {
         scrollPaddingLeft = paddingLeft;
         scrollPaddingRight = paddingRight;
 	}
+
+    public void setAllowRefresh(boolean allow) {
+        allowRefresh = allow;
+    }
 }
