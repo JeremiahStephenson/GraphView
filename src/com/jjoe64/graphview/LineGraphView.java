@@ -27,7 +27,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Shader;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
 
@@ -35,7 +34,7 @@ import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
  * Line Graph View. This draws a line chart.
  */
 public class LineGraphView extends GraphView {
-	private final Paint paintBackground;
+	private Paint paintBackground;
 	private boolean drawBackground;
     private Path poly;
 
@@ -45,10 +44,7 @@ public class LineGraphView extends GraphView {
 
 	public LineGraphView(Context context, AttributeSet attrs, boolean verticalLabelsOnRight) {
 		super(context, attrs, verticalLabelsOnRight);
-
-		paintBackground = new Paint();
-		paintBackground.setColor(Color.rgb(20, 40, 60));
-		paintBackground.setStrokeWidth(4);
+		setPaintBackground();
 	}
 
     public LineGraphView(Context context, String title) {
@@ -57,18 +53,17 @@ public class LineGraphView extends GraphView {
 
 	public LineGraphView(Context context, String title, boolean verticalLabelsOnRight) {
 		super(context, title, verticalLabelsOnRight);
-
-		paintBackground = new Paint();
-		paintBackground.setColor(Color.rgb(20, 40, 60));
-		paintBackground.setStrokeWidth(4);
+        setPaintBackground();
 	}
 
     public LineGraphView(Context context, String title, GraphViewStyle style, boolean verticalLabelsOnRight) {
         super(context, title, style, verticalLabelsOnRight);
+        setPaintBackground();
+    }
 
-        paintBackground = new Paint();
-        paintBackground.setColor(Color.rgb(20, 40, 60));
-        paintBackground.setStrokeWidth(4);
+    public LineGraphView(Context context, String title, GraphViewStyle style, boolean verticalLabelsOnRight, boolean showSideImages) {
+        super(context, title, style, verticalLabelsOnRight, showSideImages);
+        setPaintBackground();
     }
 
 	@Override
@@ -178,5 +173,11 @@ public class LineGraphView extends GraphView {
 
             canvas.drawPath(poly, paintBackground);
         }
+    }
+
+    private void setPaintBackground() {
+        paintBackground = new Paint();
+        paintBackground.setColor(Color.rgb(20, 40, 60));
+        paintBackground.setStrokeWidth(4);
     }
 }

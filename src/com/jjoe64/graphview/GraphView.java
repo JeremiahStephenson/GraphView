@@ -20,6 +20,7 @@
 package com.jjoe64.graphview;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -27,6 +28,8 @@ import android.graphics.Paint.Align;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -37,6 +40,7 @@ import com.jjoe64.graphview.compatible.ScaleGestureDetector;
 import java.io.Serializable;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -52,7 +56,8 @@ import java.util.List;
  */
 abstract public class GraphView extends RelativeLayout {
 	static final private class GraphViewConfig {
-		static final float BORDER = 10;
+		static final float BORDER = 25;
+        static final float SIDE_BORDER = 10;
 	}
 
 	private class GraphViewContentView extends View {
@@ -60,13 +65,15 @@ abstract public class GraphView extends RelativeLayout {
 		private float graphwidth;
 		private boolean scrollingStarted;
         private boolean showOnLeft = false;
+        private boolean showSideImages = false;
 
 		/**
 		 * @param context
 		 */
-		public GraphViewContentView(Context context, boolean showOnLeft) {
+		public GraphViewContentView(Context context, boolean showOnLeft, boolean showSideImages) {
 			super(context);
             this.showOnLeft = showOnLeft;
+            this.showSideImages = showSideImages;
 			setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		}
 
@@ -85,10 +92,20 @@ abstract public class GraphView extends RelativeLayout {
             float horstart = showOnLeft ? 0 : (viewVerLabels.getLayoutParams().width +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).leftMargin +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).rightMargin);
+
+            horstart += (showOnLeft && showSideImages) ? (viewVerImages.getLayoutParams().width +
+                    ((LayoutParams)viewVerImages.getLayoutParams()).leftMargin +
+                    ((LayoutParams)viewVerImages.getLayoutParams()).rightMargin) : 0;
+
             float height = getHeight();
             float width = getWidth() - (viewVerLabels.getLayoutParams().width +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).leftMargin +
                     ((LayoutParams)viewVerLabels.getLayoutParams()).rightMargin) - 1;
+
+            width -= showSideImages ? ((viewVerImages.getLayoutParams().width +
+                    ((LayoutParams)viewVerImages.getLayoutParams()).leftMargin +
+                    ((LayoutParams)viewVerImages.getLayoutParams()).rightMargin) - 1) : 0;
+
             double maxY = getMaxY();
             double minY = getMinY();
             double maxX = getMaxX(false);
@@ -199,6 +216,10 @@ abstract public class GraphView extends RelativeLayout {
 				if (!staticHorizontalLabels) horlabels = null;
 				if (!staticVerticalLabels) verlabels = null;
 				viewVerLabels.invalidate();
+
+                if (viewVerImages != null) {
+                    viewVerImages.invalidate();
+                }
 			}
 			invalidate();
 		}
@@ -275,6 +296,76 @@ abstract public class GraphView extends RelativeLayout {
 		TOP, MIDDLE, BOTTOM
 	}
 
+    private class VerImagesView extends View {
+
+        public VerImagesView(Context context) {
+            super(context);
+        }
+
+        public VerImagesView(Context context, AttributeSet attrs) {
+            super(context, attrs);
+        }
+
+        public VerImagesView(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+        }
+
+        public VerImagesView(Context context, boolean verticalImagesOnRight) {
+            super(context);
+
+            final LayoutParams params = new LayoutParams(
+                    getGraphViewStyle().getVerticalImagesWidth() == 0 ? 100 : getGraphViewStyle().getVerticalImagesWidth()
+                    , LayoutParams.MATCH_PARENT);
+
+            params.addRule(verticalImagesOnRight ? RelativeLayout.ALIGN_PARENT_RIGHT : RelativeLayout.ALIGN_PARENT_LEFT);
+
+            setLayoutParams(params);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+
+            measureBottomText();
+
+            float border = GraphViewConfig.BORDER;
+            border += labelTextHeight;
+            float height = getHeight();
+            float graphheight = height - (2 * border);
+
+            if (verImages == null) {
+                verImages = getVerImages();
+            }
+
+            if (verImagesWidth == null) {
+                int testWidth = 0;
+                for (Bitmap test : verImages) {
+                    if (test != null && test.getWidth() > testWidth) {
+                        testWidth = test.getWidth();
+                    }
+                }
+                verImagesWidth = testWidth;
+            }
+
+            if (getGraphViewStyle().getVerticalImagesWidth()==0 && getLayoutParams().width != verImagesWidth+GraphViewConfig.SIDE_BORDER) {
+                setViewLayoutParams(this, (int)(verImagesWidth+GraphViewConfig.SIDE_BORDER), LayoutParams.MATCH_PARENT,
+                        getGraphViewStyle().getVerticalImagesLeftMargin(), getGraphViewStyle().getVerticalImagesRightMargin());
+
+            } else if (getGraphViewStyle().getVerticalImagesWidth()!=0 && getGraphViewStyle().getVerticalImagesWidth() != getLayoutParams().width) {
+                setViewLayoutParams(this, getGraphViewStyle().getVerticalImagesWidth(), LayoutParams.MATCH_PARENT,
+                        getGraphViewStyle().getVerticalImagesLeftMargin(), getGraphViewStyle().getVerticalImagesRightMargin());
+            }
+
+            int vers = verImages.length - 1;
+            for (int i = 0; i < verImages.length; i++) {
+                float y = ((graphheight / vers) * i) + border;
+                if (verImages[i] != null && (i < verImages.length - 1 && !getGraphViewStyle().getShowBottomLinesAndLabels()) || getGraphViewStyle().getShowBottomLinesAndLabels()) {
+                    canvas.drawBitmap(verImages[i], 0, y - verImages[i].getHeight(), paint);
+                }
+            }
+
+        }
+    }
+
 	private class VerLabelsView extends View {
 		/**
 		 * @param context
@@ -300,13 +391,7 @@ abstract public class GraphView extends RelativeLayout {
 			paint.setStrokeWidth(0);
 
 			 // measure bottom text
-			if (labelTextHeight == null) {
-				paint.setTextSize(getGraphViewStyle().getTextSize());
-				double testY = ((getMaxY()-getMinY())*0.783)+getMinY();
-				String testLabel = formatLabel(testY, false);
-				paint.getTextBounds(testLabel, 0, testLabel.length(), textBounds);
-				labelTextHeight = (textBounds.height());
-			}
+			measureBottomText();
 
 			float border = GraphViewConfig.BORDER;
 			border += labelTextHeight;
@@ -329,16 +414,16 @@ abstract public class GraphView extends RelativeLayout {
                 verLabelTextWidth = testWidth;
             }
 
-            if (getGraphViewStyle().getVerticalLabelsWidth()==0 && getLayoutParams().width != verLabelTextWidth+GraphViewConfig.BORDER) {
+            if (getGraphViewStyle().getVerticalLabelsWidth()==0 && getLayoutParams().width != verLabelTextWidth+GraphViewConfig.SIDE_BORDER) {
 //				setLayoutParams(new LayoutParams(
 //						(int) (verLabelTextWidth+GraphViewConfig.BORDER), LayoutParams.FILL_PARENT));
-                setViewLayoutParams((int)(verLabelTextWidth+GraphViewConfig.BORDER), LayoutParams.MATCH_PARENT,
+                setViewLayoutParams(this, (int)(verLabelTextWidth+GraphViewConfig.SIDE_BORDER), LayoutParams.MATCH_PARENT,
                         getGraphViewStyle().getVerticalLabelsLeftMargin(), getGraphViewStyle().getVerticalLabelsRightMargin());
 
             } else if (getGraphViewStyle().getVerticalLabelsWidth()!=0 && getGraphViewStyle().getVerticalLabelsWidth() != getLayoutParams().width) {
 //				setLayoutParams(new LayoutParams(
 //						getGraphViewStyle().getVerticalLabelsWidth(), LayoutParams.FILL_PARENT));
-                setViewLayoutParams(getGraphViewStyle().getVerticalLabelsWidth(), LayoutParams.MATCH_PARENT,
+                setViewLayoutParams(this, getGraphViewStyle().getVerticalLabelsWidth(), LayoutParams.MATCH_PARENT,
                         getGraphViewStyle().getVerticalLabelsLeftMargin(), getGraphViewStyle().getVerticalLabelsRightMargin());
             }
 
@@ -353,20 +438,12 @@ abstract public class GraphView extends RelativeLayout {
                 }
 			}
 		}
-
-        private void setViewLayoutParams(int width, int height, int pxLeft, int pxRight) {
-            final LayoutParams params = (LayoutParams)getLayoutParams();
-            params.width = width;
-            params.height = height;
-            params.leftMargin = pxLeft;
-            params.rightMargin = pxRight;
-            setLayoutParams(params);
-        }
 	}
 
 	protected final Paint paint;
 	private String[] horlabels;
 	private String[] verlabels;
+    private Bitmap[] verImages;
 	private String title;
 	private boolean scrollable;
 	private boolean disableTouch;
@@ -377,6 +454,7 @@ abstract public class GraphView extends RelativeLayout {
     private double scrollPaddingRight;
 	private double viewportSize;
 	private final View viewVerLabels;
+    private View viewVerImages = null;
 	private ScaleGestureDetector scaleDetector;
 	private boolean scalable;
 	private final NumberFormat[] numberformatter = new NumberFormat[2];
@@ -393,10 +471,12 @@ abstract public class GraphView extends RelativeLayout {
 	private Integer labelTextHeight;
 	private Integer horLabelTextWidth;
 	private Integer verLabelTextWidth;
+    private Integer verImagesWidth;
 	private final Rect textBounds = new Rect();
 	private boolean staticHorizontalLabels;
 	private boolean staticVerticalLabels;
     private boolean allowRefresh = true;
+    private Bitmap[] sideImages;
 
     public GraphView(Context context, AttributeSet attrs) {
         this(context, attrs, false);
@@ -420,12 +500,16 @@ abstract public class GraphView extends RelativeLayout {
     }
 
     public GraphView(Context context, String title, GraphViewStyle style, boolean verticalLabelsOnRight) {
+        this(context, title, style, verticalLabelsOnRight, false);
+    }
+
+    public GraphView(Context context, String title, GraphViewStyle style, boolean verticalLabelsOnRight, boolean showSideImages) {
 
         super(context);
         setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
         if (title == null)
-            title = "";
+            this.title = "";
         else
             this.title = title;
 
@@ -437,8 +521,12 @@ abstract public class GraphView extends RelativeLayout {
         viewVerLabels = new VerLabelsView(context, verticalLabelsOnRight);
         addView(viewVerLabels);
 
-        //addView(viewVerLabels);
-        graphViewContentView = new GraphViewContentView(context, verticalLabelsOnRight);
+        if (showSideImages) {
+            viewVerImages = new VerImagesView(context, !verticalLabelsOnRight);
+            addView(viewVerImages);
+        }
+
+        graphViewContentView = new GraphViewContentView(context, verticalLabelsOnRight, showSideImages);
         addView(graphViewContentView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     }
 
@@ -601,6 +689,15 @@ abstract public class GraphView extends RelativeLayout {
 		}
 		return labels;
 	}
+
+    synchronized private Bitmap[] getVerImages() {
+        int numLabels = getGraphViewStyle().getNumVerticalLabels();
+        if (sideImages != null) {
+            return Arrays.copyOf(sideImages, numLabels);
+        }
+
+        return new Bitmap[0];
+    }
 
 	/**
 	 * @return the custom label formatter, if there is one. otherwise null
@@ -772,6 +869,11 @@ abstract public class GraphView extends RelativeLayout {
 
             invalidate();
             viewVerLabels.invalidate();
+
+            if (viewVerImages != null) {
+                viewVerImages.invalidate();
+            }
+
             graphViewContentView.invalidate();
         }
 	}
@@ -1005,7 +1107,30 @@ abstract public class GraphView extends RelativeLayout {
         scrollPaddingRight = paddingRight;
 	}
 
+    public void setSideImages(Bitmap[] images) {
+        sideImages = images;
+    }
+
     public void setAllowRefresh(boolean allow) {
         allowRefresh = allow;
+    }
+
+    private void setViewLayoutParams(View view, int width, int height, int pxLeft, int pxRight) {
+        final LayoutParams params = (LayoutParams)view.getLayoutParams();
+        params.width = width;
+        params.height = height;
+        params.leftMargin = pxLeft;
+        params.rightMargin = pxRight;
+        view.setLayoutParams(params);
+    }
+
+    private void measureBottomText() {
+        if (labelTextHeight == null) {
+            paint.setTextSize(getGraphViewStyle().getTextSize());
+            double testY = ((getMaxY()-getMinY())*0.783)+getMinY();
+            String testLabel = formatLabel(testY, false);
+            paint.getTextBounds(testLabel, 0, testLabel.length(), textBounds);
+            labelTextHeight = (textBounds.height());
+        }
     }
 }

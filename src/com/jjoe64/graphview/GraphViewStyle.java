@@ -32,10 +32,13 @@ public class GraphViewStyle {
 	private int gridColor;
 	private float textSize = 30f;
 	private int verticalLabelsWidth;
+    private int verticalImagesWidth;
 	private int numVerticalLabels;
 	private int numHorizontalLabels;
     private int verticalLabelsLeftMargin;
     private int verticalLabelsRightMargin;
+    private int verticalImagesLeftMargin;
+    private int verticalImagesRightMargin;
     private int[] lineGradientColors = null;
     private boolean showBottomLineAndLabels = true;
 
@@ -79,12 +82,24 @@ public class GraphViewStyle {
 		return verticalLabelsWidth;
 	}
 
+    public int getVerticalImagesWidth() {
+        return verticalImagesWidth;
+    }
+
     public int getVerticalLabelsLeftMargin() {
         return verticalLabelsLeftMargin;
     }
 
     public int getVerticalLabelsRightMargin() {
         return verticalLabelsRightMargin;
+    }
+
+    public int getVerticalImagesLeftMargin() {
+        return verticalImagesLeftMargin;
+    }
+
+    public int getVerticalImagesRightMargin() {
+        return verticalImagesRightMargin;
     }
 
     public int[] getLineGradientColors() {
@@ -132,9 +147,18 @@ public class GraphViewStyle {
 		this.verticalLabelsWidth = verticalLabelsWidth;
 	}
 
+    public void setVerticalImagesWidth(int verticalImagesWidth) {
+        this.verticalImagesWidth = verticalImagesWidth;
+    }
+
     public void setVerticalLabelsMargins(int verticalLabelsLeftMargin, int verticalLabelsRightMargin) {
         this.verticalLabelsLeftMargin = verticalLabelsLeftMargin;
         this.verticalLabelsRightMargin = verticalLabelsRightMargin;
+    }
+
+    public void setVerticalImagesMargins(int verticalImagesLeftMargin, int verticalImagesRightMargin) {
+        this.verticalImagesLeftMargin = verticalImagesLeftMargin;
+        this.verticalImagesRightMargin = verticalImagesRightMargin;
     }
 
     public void setLineGradientColors(int[] colors) {
