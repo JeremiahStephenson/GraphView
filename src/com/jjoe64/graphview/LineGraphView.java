@@ -34,7 +34,7 @@ import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
  * Line Graph View. This draws a line chart.
  */
 public class LineGraphView extends GraphView {
-	private Paint paintBackground;
+	protected Paint paintBackground;
 	private boolean drawBackground;
     private Path poly;
 
@@ -175,7 +175,40 @@ public class LineGraphView extends GraphView {
         }
     }
 
-    private void setPaintBackground() {
+    protected void drawShadedBackground(Canvas canvas, GraphViewDataInterface[] values, Path path, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart) {
+
+        if (drawBackground) {
+
+            if (poly == null) {
+                poly = new Path();
+            }
+
+            poly.reset();
+            poly.addPath(path);
+
+            float initialX;
+            double x;
+
+            x = graphwidth * ((values[0].getX() - minX) / diffX);
+            initialX = ((float)x) + (horstart + 1);
+
+            x = graphwidth * ((values[values.length - 1].getX() - minX) / diffX);
+
+            //poly.lineTo((((float)x) + (horstart + 1)), graphheight + border);
+            //poly.lineTo(initialX, graphheight + border);
+            //poly.lineTo(initialX, (float) (border - (graphheight * ((values[0].getY() - minY) / diffY))) + graphheight + 2);
+
+            poly.quadTo(((float)x) + (horstart + 1), graphheight + border, ((float)x) + (horstart + 1), graphheight + border);
+            poly.quadTo(initialX, graphheight + border, initialX, graphheight + border);
+            poly.quadTo(initialX, (float) (border - (graphheight * ((values[0].getY() - minY) / diffY))) + graphheight + 2, initialX, (float) (border - (graphheight * ((values[0].getY() - minY) / diffY))) + graphheight + 2);
+
+            poly.close();
+
+            canvas.drawPath(poly, paintBackground);
+        }
+    }
+
+    protected void setPaintBackground() {
         paintBackground = new Paint();
         paintBackground.setColor(Color.rgb(20, 40, 60));
         paintBackground.setStrokeWidth(4);
