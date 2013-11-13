@@ -177,7 +177,7 @@ public class LineGraphView extends GraphView {
 
     protected void drawShadedBackground(Canvas canvas, GraphViewDataInterface[] values, Path path, float graphwidth, float graphheight, float border, double minX, double minY, double diffX, double diffY, float horstart) {
 
-        if (drawBackground) {
+        if (drawBackground && values.length > 0) {
 
             if (poly == null) {
                 poly = new Path();
